@@ -271,6 +271,13 @@ done
 expect_ok "web-пакеты импортируются" \
     box "$AC10_VENV/bin/python -c \"import fastapi, django, flask, uvicorn, gunicorn\""
 
+MENU_ML_PICK="$(box "printf '1\n' | VENV_DIR=$AC10_VENV setup.sh" 2>&1)"
+check "выбор пункта меню сообщает об установке пакетов (ml)" \
+    "установка пакетов направления ml" "$MENU_ML_PICK"
+MENU_WEB_PICK="$(box "printf '2\n' | VENV_DIR=$AC10_VENV setup.sh" 2>&1)"
+check "выбор пункта меню сообщает об установке пакетов (web)" \
+    "установка пакетов направления web" "$MENU_WEB_PICK"
+
 GPU_OUT="$(box 'setup.sh gpu' 2>&1)"
 check "gpu-направление отдаёт инструкцию по PyTorch" "pytorch" "$GPU_OUT"
 check "gpu-направление отдаёт инструкцию по TensorFlow" "tensorflow" "$GPU_OUT"

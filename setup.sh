@@ -59,6 +59,11 @@ usage() {
     printf 'Окружение: %s (переопределяется переменной VENV_DIR)\n' "$VENV_DIR"
 }
 
+say_installing() {
+    printf '%s→%s установка пакетов направления %s в %s — может занять минуту\n' \
+        "$C_CYAN" "$C_RESET" "$1" "$VENV_DIR"
+}
+
 ensure_venv() {
     if [[ ! -x "$PY" ]]; then
         printf '%s→%s создаю venv: %s\n' "$C_CYAN" "$C_RESET" "$VENV_DIR"
@@ -126,8 +131,8 @@ menu() {
     read -r choice || { echo; return 0; }
     case "$choice" in
         ''|q|Q) return 0 ;;
-        1|ml)   install_ml ;;
-        2|web)  install_web ;;
+        1|ml)   say_installing ml;  install_ml ;;
+        2|web)  say_installing web; install_web ;;
         3|gpu)  show_gpu ;;
         *)
             err "неизвестный выбор: $choice"
