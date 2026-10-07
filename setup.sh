@@ -137,9 +137,20 @@ current_env() {
     fi
 }
 
+base_toolchain() {
+    [[ -x /opt/devtools/bin/python ]] || return 0
+    /opt/devtools/bin/python -m pip list --format=freeze --disable-pip-version-check |
+        grep -E '^(pytest|ruff|mypy|ipython)==' || true
+}
+
 menu() {
     printf '%sТекущее окружение%s (%s):\n' "$C_CYAN" "$C_RESET" "$VENV_DIR"
     current_env | sed 's/^/  /'
+    if [[ -x /opt/devtools/bin/python ]]; then
+        printf '\n%sБазовый тулчейн%s (/opt/devtools — из образа, остаётся при remove):\n' \
+            "$C_CYAN" "$C_RESET"
+        base_toolchain | sed 's/^/  /'
+    fi
     echo
     hdr "Направления:"
     printf '  1) %sml%s   — numpy==%s, pandas==%s, scikit-learn==%s\n' \

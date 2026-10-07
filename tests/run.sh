@@ -236,6 +236,8 @@ check "меню перечисляет направления" "ml" "$MENU_OUT"
 check "меню показывает текущее окружение" "Текущее окружение" "$MENU_OUT"
 check "меню перечисляет направление web" "web" "$MENU_OUT"
 check "меню перечисляет удаление пакетов" "Удалить все установленные пакеты" "$MENU_OUT"
+check "меню показывает базовый тулчейн" "Базовый тулчейн" "$MENU_OUT"
+check "меню показывает pytest из образа" "pytest==" "$MENU_OUT"
 check_absent "в не-TTY цветов нет (вывод машиночитаем)" $'\033[' "$MENU_OUT"
 check "FORCE_COLOR включает цвет" $'\033[' \
     "$(FORCE_COLOR=1 "$ROOT_DIR/setup.sh" --help 2>&1)"
@@ -298,6 +300,10 @@ expect_fail "удаление: numpy удалён" box "$AC10_VENV/bin/python -c
 expect_fail "удаление: fastapi удалён" box "$AC10_VENV/bin/python -c 'import fastapi'"
 check "удаление: транзитивные зависимости остаются" "scipy==" \
     "$(box "$AC10_VENV/bin/python -m pip list --format=freeze" 2>&1)"
+
+MENU_AFTER_RM="$(box "VENV_DIR=$AC10_VENV setup.sh </dev/null" 2>&1)"
+check "после удаления меню показывает базовый тулчейн" "Базовый тулчейн" "$MENU_AFTER_RM"
+check "после удаления pytest виден из образа" "pytest==" "$MENU_AFTER_RM"
 
 rm -rf "$ROOT_DIR/workspace/.venv-ac10"
 dc down --remove-orphans >/dev/null 2>&1
