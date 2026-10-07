@@ -288,12 +288,16 @@ check "удаление: пустой ответ на подтверждение
 expect_ok "удаление: после отмены окружение цело" \
     box "test -x $AC10_VENV/bin/python"
 MENU_RM_OUT="$(box "printf '4\ny\n' | VENV_DIR=$AC10_VENV setup.sh" 2>&1)"
-check "удаление: подтверждение удаляет пакеты" "удалено" "$MENU_RM_OUT"
-if box "test ! -e $AC10_VENV" >/dev/null 2>&1; then
-    ok "удаление: окружение больше не существует"
+check "удаление: подтверждение удаляет пакеты" "удален" "$MENU_RM_OUT"
+if box "test -x $AC10_VENV/bin/python" >/dev/null 2>&1; then
+    ok "удаление: venv остаётся"
 else
-    bad "удаление: окружение осталось на месте"
+    bad "удаление: venv удалён целиком"
 fi
+expect_fail "удаление: numpy удалён" box "$AC10_VENV/bin/python -c 'import numpy'"
+expect_fail "удаление: fastapi удалён" box "$AC10_VENV/bin/python -c 'import fastapi'"
+check "удаление: транзитивные зависимости остаются" "scipy==" \
+    "$(box "$AC10_VENV/bin/python -m pip list --format=freeze" 2>&1)"
 
 rm -rf "$ROOT_DIR/workspace/.venv-ac10"
 dc down --remove-orphans >/dev/null 2>&1
