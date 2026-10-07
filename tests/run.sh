@@ -240,6 +240,8 @@ check "FORCE_COLOR включает цвет" $'\033[' \
     "$(FORCE_COLOR=1 "$ROOT_DIR/setup.sh" --help 2>&1)"
 check_absent "NO_COLOR гасит цвет даже при FORCE_COLOR" $'\033[' \
     "$(FORCE_COLOR=1 NO_COLOR=1 "$ROOT_DIR/setup.sh" --help 2>&1)"
+check "FORCE_COLOR пробрасывается в контейнер" $'\033[' \
+    "$(FORCE_COLOR=1 box 'setup.sh --help' 2>&1)"
 expect_fail "неизвестное направление — отказ" box 'setup.sh no-such-direction'
 
 expect_ok "setup.sh ml ставит пакеты" box "VENV_DIR=$AC10_VENV setup.sh ml"

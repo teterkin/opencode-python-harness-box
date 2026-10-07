@@ -9,6 +9,8 @@ services:
       - OPENCODE_API_KEY
       - GIT_USER_NAME
       - GIT_USER_EMAIL
+      - FORCE_COLOR
+      - NO_COLOR
     volumes:
       - ./workspace:/workspace
       - ./setup.sh:/usr/local/bin/setup.sh:ro
