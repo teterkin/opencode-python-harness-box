@@ -39,7 +39,7 @@ RUN git clone --quiet https://github.com/teterkin/opencode-harness /opt/opencode
     && HOME=/home/box /opt/opencode-harness/install.sh \
     && chmod -R a+rX /opt/opencode-harness
 
-RUN chmod 755 /home/box
+RUN chown root:root /home/box && chmod 755 /home/box
 
 USER box
 WORKDIR /workspace
