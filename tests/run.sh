@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Проверки бокса: AC1–AC9 из README. Запуск: bash tests/run.sh
+# Проверки бокса: AC1–AC10 из README. Запуск: bash tests/run.sh
 # Нужен только Docker на хосте; всё остальное происходит в контейнере.
 
 set -uo pipefail
@@ -63,6 +63,18 @@ expect_denied() {
 }
 
 dc() { (cd "$ROOT_DIR" && docker compose "$@"); }
+
+expect_fail() {
+    # Ожидает ненулевой код выхода (отказ валидации, а не сбой среды).
+    local label="$1"; shift
+    local out rc
+    out="$("$@" 2>&1)"; rc=$?
+    if [[ "$rc" -ne 0 ]]; then
+        ok "$label"
+    else
+        bad "$label (ожидал ненулевой rc, команда прошла: $*)"
+    fi
+}
 
 box() { dc run --rm -T box sh -lc "$1"; }
 
@@ -191,6 +203,42 @@ expect_ok "pytest -n auto работает (pytest-xdist)" \
 expect_ok "ruff check и ruff format --check проходят на файле в /workspace" \
     box 'printf "x = 1\n" > /workspace/ac9_probe.py && ruff check /workspace/ac9_probe.py && ruff format --check /workspace/ac9_probe.py'
 rm -f "$ROOT_DIR/workspace/ac9_probe.py"
+dc down --remove-orphans >/dev/null 2>&1
+
+echo
+echo "== AC10: setup.sh и направления стека =="
+AC10_VENV='/workspace/.venv-ac10'
+expect_ok "setup.sh существует и исполняем на хосте" test -x "$ROOT_DIR/setup.sh"
+expect_ok "setup.sh смонтирован в контейнер" \
+    box 'test -f /usr/local/bin/setup.sh && test -x /usr/local/bin/setup.sh'
+
+MENU_OUT="$(box "VENV_DIR=$AC10_VENV setup.sh </dev/null" 2>&1)"; MENU_RC=$?
+if [[ "$MENU_RC" -eq 0 ]]; then
+    ok "без аргументов setup.sh печатает меню и завершается (rc=0)"
+else
+    bad "без аргументов setup.sh упал (rc=$MENU_RC: $(printf '%s' "$MENU_OUT" | tail -n 2 | tr '\n' ' | '))"
+fi
+check "меню перечисляет направления" "ml" "$MENU_OUT"
+check "меню показывает текущее окружение" "Текущее окружение" "$MENU_OUT"
+expect_fail "неизвестное направление — отказ" box 'setup.sh no-such-direction'
+
+expect_ok "setup.sh ml ставит пакеты" box "VENV_DIR=$AC10_VENV setup.sh ml"
+for spec in 'numpy:NUMPY_VERSION' 'pandas:PANDAS_VERSION' 'sklearn:SKLEARN_VERSION'; do
+    pkg="${spec%%:*}"; var="${spec##*:}"
+    pin="$(grep -E "^${var}=" "$ROOT_DIR/setup.sh" | head -n1 | cut -d= -f2)"
+    if [[ -z "$pin" ]]; then
+        bad "пин $var не найден в setup.sh"
+        continue
+    fi
+    check "$pkg по пину из setup.sh ($pin)" "$pin" \
+        "$(box "$AC10_VENV/bin/python -c \"import $pkg; print($pkg.__version__)\"" 2>&1)"
+done
+
+GPU_OUT="$(box 'setup.sh gpu' 2>&1)"
+check "gpu-направление отдаёт инструкцию по PyTorch" "pytorch" "$GPU_OUT"
+check "gpu-направление отдаёт инструкцию по TensorFlow" "tensorflow" "$GPU_OUT"
+
+rm -rf "$ROOT_DIR/workspace/.venv-ac10"
 dc down --remove-orphans >/dev/null 2>&1
 
 echo
