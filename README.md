@@ -294,7 +294,7 @@ workspace/            рабочая папка проекта — единст�
 | `1.5.0` | `setup.sh` отказывает вне контейнера с подсказкой | `e6356eb` |
 | `1.6.0` | Цветной вывод `setup.sh` (TTY / `FORCE_COLOR` / `NO_COLOR`) | `3dd9cbc` |
 | `1.7.0` | Направление `web` (FastAPI/Django/Flask/uvicorn/gunicorn), раздел README переписан | `cb55eb9` |
-| `1.8.0` | `FORCE_COLOR`/`NO_COLOR` пробрасываются в контейнер через compose | — |
+| `1.8.0` | `FORCE_COLOR`/`NO_COLOR` пробрасываются в контейнер через compose | `7cee09e` |
 
 ## Открытые пункты
 
