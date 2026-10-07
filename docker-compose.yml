@@ -1,0 +1,7 @@
+services:
+  box:
+    image: opencode-python-harness-box
+    build:
+      context: .
+    tty: true
+    stdin_open: true
