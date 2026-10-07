@@ -112,6 +112,7 @@ echo "== AC5: env и ключ только в рантайме =="
 check_eq "git user.name совпадает с хостом" "$HOST_GIT_NAME" "$(box 'git config --get user.name')"
 check_eq "git user.email совпадает с хостом" "$HOST_GIT_EMAIL" "$(box 'git config --get user.email')"
 if [[ -n "$HOST_KEY" ]]; then
+    # shellcheck disable=SC2016  # переменная раскрывается в контейнере
     check_eq "OPENCODE_API_KEY доехал до контейнера" "$HOST_KEY" \
         "$(box 'printf %s "$OPENCODE_API_KEY"')"
 fi
@@ -132,6 +133,7 @@ echo
 echo "== AC6: изоляция =="
 check "контейнер не от root" "1000" "$(box 'id -u')"
 expect_denied "запись в /etc неудачна" box 'touch /etc/.box-probe'
+# shellcheck disable=SC2016  # переменная раскрывается в контейнере
 expect_denied "запись в \$HOME вне mount'ов неудачна" box 'touch "$HOME/.box-probe"'
 
 echo
