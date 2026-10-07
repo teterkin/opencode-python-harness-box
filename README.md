@@ -27,6 +27,26 @@ Python-окружением разработки. Окружение воспр�
 Не является: дистрибутивом харнесса (он только потребляется), docker-in-docker,
 GUI/десктоп-вариантом opencode, решением для multi-user/удалённого доступа.
 
+## Требования к хосту
+
+Нужны только Docker (с Compose v2), bash и git. opencode, python3 и прочие
+инструменты на хост ставить не нужно — всё живёт в контейнере.
+
+- **bash** — `run.sh`, `tests/run.sh`. Проверка: `bash --version`. macOS и
+  Linux — из коробки.
+- **Docker Engine + Compose v2** — сборка и запуск бокса. Проверка:
+  `docker --version && docker compose version`, а `docker info` должен
+  выводить версию сервера, а не ошибку подключения (демон запущен).
+  Установка: macOS — `brew install --cask docker` (Docker Desktop),
+  Linux — <https://docs.docker.com/engine/install/>.
+- **git** — клонирование и дефолтная git-идентичность для контейнера.
+  Проверка: `git --version`. macOS — `xcode-select --install`,
+  Linux — `apt install git`.
+- **shellcheck** *(необязательно)* — линтер шелл-скриптов. Проверка:
+  `shellcheck --version`; macOS — `brew install shellcheck`,
+  Linux — `apt install shellcheck`. Прогон:
+  `shellcheck run.sh entrypoint.sh tests/run.sh` (ноль замечаний).
+
 ## Связь с opencode-harness
 
 Структурной связи нет — только потребление:
@@ -129,6 +149,7 @@ tests/run.sh          проверки AC1-AC8 в стиле тестов хар
 
 ## Разработка
 
-Тесты бокса: `bash tests/run.sh`. Цикл: RED — один падающий AC-тест, показать
-вывод; GREEN — минимальная правка, показать вывод; REFACTOR — при зелёных
-тестах. Коммит — один на цикл.
+Тесты бокса: `bash tests/run.sh`. Линтер: `shellcheck run.sh entrypoint.sh
+tests/run.sh`. Цикл: RED — один падающий AC-тест, показать вывод; GREEN —
+минимальная правка, показать вывод; REFACTOR — при зелёных тестах.
+Коммит — один на цикл.
