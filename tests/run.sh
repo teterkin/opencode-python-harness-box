@@ -289,6 +289,9 @@ MENU_RM_CANCEL="$(box "printf '4\n\n' | VENV_DIR=$AC10_VENV setup.sh" 2>&1)"
 check "удаление: пустой ответ на подтверждение — отмена" "Отменено" "$MENU_RM_CANCEL"
 expect_ok "удаление: после отмены окружение цело" \
     box "test -x $AC10_VENV/bin/python"
+expect_ok "манифест пакетов направлений создан" box "test -f $AC10_VENV/.setup-pkgs"
+expect_ok "канареечный пакет ставится руками" \
+    box "$AC10_VENV/bin/python -m pip install --quiet pygments"
 MENU_RM_OUT="$(box "printf '4\ny\n' | VENV_DIR=$AC10_VENV setup.sh" 2>&1)"
 check "удаление: подтверждение удаляет пакеты" "удален" "$MENU_RM_OUT"
 if box "test -x $AC10_VENV/bin/python" >/dev/null 2>&1; then
@@ -298,8 +301,17 @@ else
 fi
 expect_fail "удаление: numpy удалён" box "$AC10_VENV/bin/python -c 'import numpy'"
 expect_fail "удаление: fastapi удалён" box "$AC10_VENV/bin/python -c 'import fastapi'"
-check "удаление: транзитивные зависимости остаются" "scipy==" \
-    "$(box "$AC10_VENV/bin/python -m pip list --format=freeze" 2>&1)"
+expect_fail "удаление: транзитивные ml удалены (dateutil)" \
+    box "$AC10_VENV/bin/python -c 'import dateutil'"
+expect_fail "удаление: зависимости web удалены (starlette)" \
+    box "$AC10_VENV/bin/python -c 'import starlette'"
+expect_ok "ручной пакет после remove остаётся" \
+    box "$AC10_VENV/bin/python -c 'import pygments'"
+if box "test ! -f $AC10_VENV/.setup-pkgs" >/dev/null 2>&1; then
+    ok "удаление: манифест пакетов удалён"
+else
+    bad "удаление: манифест остался"
+fi
 
 MENU_AFTER_RM="$(box "VENV_DIR=$AC10_VENV setup.sh </dev/null" 2>&1)"
 check "после удаления меню показывает базовый тулчейн" "Базовый тулчейн" "$MENU_AFTER_RM"

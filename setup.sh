@@ -73,7 +73,16 @@ ensure_venv() {
 
 install_pkgs() {
     ensure_venv
+    local manifest="$VENV_DIR/.setup-pkgs"
+    local before after new
+    before="$("$PY" -m pip list --format=freeze --disable-pip-version-check)"
     "$PY" -m pip install --disable-pip-version-check --quiet "$@"
+    after="$("$PY" -m pip list --format=freeze --disable-pip-version-check)"
+    new="$(printf '%s\n' "$after" | grep -vxF -f <(printf '%s\n' "$before") || true)"
+    if [[ -n "$new" ]]; then
+        printf '%s\n' "$new" >> "$manifest"
+        sort -u "$manifest" -o "$manifest"
+    fi
     printf '%s✓%s установлено в %s:\n' "$C_GREEN" "$C_RESET" "$VENV_DIR"
     "$PY" -m pip list --format=freeze
 }
@@ -95,19 +104,27 @@ install_web() {
 }
 
 remove_pkgs() {
-    if [[ ! -x "$PY" ]]; then
+    local manifest="$VENV_DIR/.setup-pkgs"
+    if [[ ! -x "$PY" && ! -f "$manifest" ]]; then
         printf 'окружение %s не создано — удалять нечего\n' "$VENV_DIR"
         return 0
     fi
-    printf '%sУдалить пакеты направлений (пины ml и web) из %s? [y/N]: %s' \
+    printf '%sУдалить пакеты направлений и их зависимости из %s? [y/N]: %s' \
         "$C_BOLD" "$VENV_DIR" "$C_RESET"
     local answer=''
     read -r answer || { echo; printf 'Отменено\n'; return 0; }
     case "$answer" in
         y|Y|yes|Yes|YES|д|Д|да|Да|ДА)
-            "$PY" -m pip uninstall --disable-pip-version-check -y \
-                numpy pandas scikit-learn fastapi django flask uvicorn gunicorn
-            printf '%s✓%s удалены пакеты направлений из %s\n' \
+            if [[ ! -f "$manifest" ]]; then
+                printf 'пакетов направлений не установлено — удалять нечего\n'
+                return 0
+            fi
+            mapfile -t pkgs < <(grep -v '^pip==' "$manifest")
+            if [[ ${#pkgs[@]} -gt 0 ]]; then
+                "$PY" -m pip uninstall --disable-pip-version-check -y "${pkgs[@]}"
+            fi
+            rm -f "$manifest"
+            printf '%s✓%s удалены пакеты направлений и их зависимости из %s\n' \
                 "$C_GREEN" "$C_RESET" "$VENV_DIR"
             ;;
         *)
