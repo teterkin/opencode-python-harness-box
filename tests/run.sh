@@ -73,6 +73,9 @@ probe_file() { printf '%s' "$ROOT_DIR/.ac-probe-$$"; }
 HOST_KEY="${OPENCODE_API_KEY:-}"
 HOST_GIT_NAME="$(git config --global --get user.name 2>/dev/null || git config --get user.name 2>/dev/null)"
 HOST_GIT_EMAIL="$(git config --global --get user.email 2>/dev/null || git config --get user.email 2>/dev/null)"
+# Дефолты те же, что подставляет run.sh: git-идентичность хоста.
+export GIT_USER_NAME="${GIT_USER_NAME:-$HOST_GIT_NAME}"
+export GIT_USER_EMAIL="${GIT_USER_EMAIL:-$HOST_GIT_EMAIL}"
 
 echo "== AC1: запуск на чистой машине =="
 expect_ok "run.sh существует и исполняем" test -x "$ROOT_DIR/run.sh"
@@ -141,8 +144,11 @@ if dc down --remove-orphans >/dev/null 2>&1 && [[ -z "$(dc ps -a -q 2>/dev/null)
 else
     bad "docker compose down не остановил среду"
 fi
-box "printf v2 > \"\$HOME/$STATE\""
-check_eq "файл состояния жив после перезапуска" "v2" \
+check_eq "состояние пережило остановку" "v1" \
+    "$(box "cat \"\$HOME/$STATE\"")"
+expect_ok "запись после перезапуска" \
+    box "printf v2 > \"\$HOME/$STATE\""
+check_eq "запись после перезапуска читается" "v2" \
     "$(box "cat \"\$HOME/$STATE\"")"
 box "rm -f \"\$HOME/$STATE\""
 
