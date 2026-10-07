@@ -102,6 +102,10 @@ SKILLS="$(box 'opencode debug skill')"
 check "скилл tdd-workflow" "tdd-workflow" "$SKILLS"
 check "скилл prd-authoring" "prd-authoring" "$SKILLS"
 
+HARNESS_AGENTS="$(box 'cat /opt/opencode-harness/AGENTS.md')"
+check "AGENTS.md: правило 7 (пины)" "Pin every dependency" "$HARNESS_AGENTS"
+check "AGENTS.md: напоминание про git init" "git init" "$HARNESS_AGENTS"
+
 echo
 echo "== AC3: тесты харнесса внутри контейнера =="
 expect_ok "bash /opt/opencode-harness/tests/run.sh" \
