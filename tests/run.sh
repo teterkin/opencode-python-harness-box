@@ -234,6 +234,11 @@ else
 fi
 check "меню перечисляет направления" "ml" "$MENU_OUT"
 check "меню показывает текущее окружение" "Текущее окружение" "$MENU_OUT"
+check_absent "в не-TTY цветов нет (вывод машиночитаем)" $'\033[' "$MENU_OUT"
+check "FORCE_COLOR включает цвет" $'\033[' \
+    "$(FORCE_COLOR=1 "$ROOT_DIR/setup.sh" --help 2>&1)"
+check_absent "NO_COLOR гасит цвет даже при FORCE_COLOR" $'\033[' \
+    "$(FORCE_COLOR=1 NO_COLOR=1 "$ROOT_DIR/setup.sh" --help 2>&1)"
 expect_fail "неизвестное направление — отказ" box 'setup.sh no-such-direction'
 
 expect_ok "setup.sh ml ставит пакеты" box "VENV_DIR=$AC10_VENV setup.sh ml"
