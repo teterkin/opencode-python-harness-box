@@ -86,6 +86,35 @@ menu() {
     esac
 }
 
+in_container() {
+    [[ -f /.dockerenv || -f /.containerenv ]]
+}
+
+# --help читается где угодно, всё остальное — только в контейнере.
+help_only=1
+if [[ $# -eq 0 ]]; then
+    help_only=0
+else
+    for arg in "$@"; do
+        case "$arg" in
+            -h|--help) ;;
+            *) help_only=0 ;;
+        esac
+    done
+fi
+
+if [[ "$help_only" -eq 0 ]] && ! in_container; then
+    cat >&2 <<EOF
+setup.sh запускается только внутри контейнера: пакеты должны попасть в venv
+смонтированного каталога ($VENV_DIR), а не в окружение хоста.
+
+  ./run.sh setup.sh          — интерактивное меню
+  ./run.sh setup.sh ml       — установка ml-направления
+  ./run.sh setup.sh gpu      — инструкция по PyTorch/TensorFlow
+EOF
+    exit 1
+fi
+
 if [[ $# -eq 0 ]]; then
     menu
     exit 0

@@ -213,6 +213,16 @@ echo
 echo "== AC10: setup.sh и направления стека =="
 AC10_VENV='/workspace/.venv-ac10'
 expect_ok "setup.sh существует и исполняем на хосте" test -x "$ROOT_DIR/setup.sh"
+# VENV_DIR указывает в несуществующее место: даже без guard'а скрипт на хосте
+# уйдёт в быстрый отказ python3 -m venv, а не в установку пакетов.
+HOST_OUT="$(VENV_DIR=/dev/null/x/.venv "$ROOT_DIR/setup.sh" ml 2>&1)"; HOST_RC=$?
+if [[ "$HOST_RC" -ne 0 ]]; then
+    ok "setup.sh на хосте отказывается работать"
+else
+    bad "setup.sh на хосте ушёл в установку (rc=0)"
+fi
+check "отказ подсказывает запуск через контейнер" "./run.sh setup.sh" "$HOST_OUT"
+expect_ok "setup.sh --help читается на хосте" "$ROOT_DIR/setup.sh" --help
 expect_ok "setup.sh смонтирован в контейнер" \
     box 'test -f /usr/local/bin/setup.sh && test -x /usr/local/bin/setup.sh'
 
