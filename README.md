@@ -105,9 +105,10 @@ GUI/десктоп-вариантом opencode, решением для multi-us
 5. **TUI — обычный `docker compose run -it`** через `run.sh`. tmux и
    переподключение к отвалившейся сессии — вне scope: история сессий и так
    живёт в volume.
-6. **Рабочий каталог — mount `$PWD`** (или первый аргумент `run.sh`) в
-   `/workspace`. Проектный `AGENTS.md` берётся оттуда же; конфиг харнесса —
-   в образе, не в volume.
+6. **Рабочий каталог — только подпапка `workspace/`**, не корень репозитория:
+   `./workspace:/workspace`. Проектный `AGENTS.md` берётся оттуда же; конфиг
+   харнесса — в образе, не в volume. `workspace/*` в `.gitignore` (в коммит
+   идёт только `.gitkeep`), чтобы код проекта не смешивался с кодом бокса.
 
 ## Архитектура
 
@@ -119,14 +120,15 @@ Dockerfile            ubuntu:24.04 + python-dev тулчейн + opencode (пи�
                       ~/.local/share/opencode, ~/.cache — tmpfs
 entrypoint.sh         пишет /tmp/gitconfig из GIT_USER_NAME/GIT_USER_EMAIL,
                       выставляет GIT_CONFIG_GLOBAL, exec "$@"
-docker-compose.yml    tty/stdin, bind-mount проекта -> /workspace,
+docker-compose.yml    tty/stdin, bind-mount ./workspace -> /workspace,
                       named volume состояния, env-прокидка
 run.sh                сборка при первом запуске, дефолты git-идентичности
                       с хоста, docker compose run --rm
 tests/run.sh          проверки AC1-AC8 в стиле тестов харнесса
                       (bash, check/FAIL)
 .env.example          OPENCODE_API_KEY, GIT_USER_NAME, GIT_USER_EMAIL
-.gitignore            .env
+.gitignore            .env, workspace/* (кроме .gitkeep)
+workspace/            рабочая папка проекта — единственное, что смонтировано
 ```
 
 ## Журнал изменений
@@ -140,6 +142,7 @@ tests/run.sh          проверки AC1-AC8 в стиле тестов хар
 | `0.3.0` | Изоляция: не-root, запись вне mount'ов запрещена (AC6) | `6575ff4` |
 | `0.4.0` | Bind-mount, env-ключи, git-идентичность, volume (AC4, AC5, AC7, AC8) | `f05bedf`, `9fb2dbe` |
 | `1.0.0` | Все AC зелёные, финальный прогон | `351feaf` |
+| `1.1.0` | Mount только `workspace/`, корень репо не виден в контейнере (TDD3) | — |
 
 ## Открытые пункты
 

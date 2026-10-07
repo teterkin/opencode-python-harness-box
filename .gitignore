@@ -2,3 +2,5 @@
 .ac-probe-*
 .venv-ac8/
 .venv/
+workspace/*
+!workspace/.gitkeep

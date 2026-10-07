@@ -10,7 +10,7 @@ services:
       - GIT_USER_NAME
       - GIT_USER_EMAIL
     volumes:
-      - .:/workspace
+      - ./workspace:/workspace
       - opencode-state:/home/box/.local/share/opencode
       - type: tmpfs
         target: /home/box/.cache

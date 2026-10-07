@@ -66,7 +66,7 @@ dc() { (cd "$ROOT_DIR" && docker compose "$@"); }
 
 box() { dc run --rm -T box sh -lc "$1"; }
 
-probe_file() { printf '%s' "$ROOT_DIR/.ac-probe-$$"; }
+probe_file() { printf '%s' "$ROOT_DIR/workspace/.ac-probe-$$"; }
 
 # shellcheck disable=SC1091
 [[ -f "$ROOT_DIR/.env" ]] && set -a && . "$ROOT_DIR/.env" && set +a
@@ -105,6 +105,8 @@ if [[ -f "$PROBE" ]]; then
 else
     bad "файл из контейнера не появился на хосте: $PROBE"
 fi
+expect_ok "корень репо не смонтирован (нет /workspace/Dockerfile)" \
+    box 'test ! -f /workspace/Dockerfile'
 rm -f "$PROBE"
 
 echo
@@ -162,7 +164,7 @@ expect_ok "venv создаётся в /workspace" box 'python3 -m venv /workspac
 expect_ok "python из venv работает" box '/workspace/.venv-ac8/bin/python --version'
 dc down --remove-orphans >/dev/null 2>&1
 expect_ok "venv пережил перезапуск" box '/workspace/.venv-ac8/bin/python --version'
-rm -rf "$ROOT_DIR/.venv-ac8"
+rm -rf "$ROOT_DIR/workspace/.venv-ac8"
 dc down --remove-orphans >/dev/null 2>&1
 
 echo
