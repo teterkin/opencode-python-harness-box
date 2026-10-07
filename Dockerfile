@@ -6,7 +6,7 @@ ARG HARNESS_REF=78452bf1
 ARG DEBIAN_FRONTEND=noninteractive
 
 ENV LANG=C.UTF-8 \
-    PATH=/home/box/.opencode/bin:$PATH
+    PATH=/home/box/.opencode/bin:$PATH:/opt/devtools/bin
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         python3 \
@@ -21,6 +21,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ripgrep \
         jq \
     && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-devtools.txt /tmp/requirements-devtools.txt
+RUN python3 -m venv /opt/devtools \
+    && /opt/devtools/bin/pip install --no-cache-dir --disable-pip-version-check \
+        -r /tmp/requirements-devtools.txt \
+    && rm /tmp/requirements-devtools.txt \
+    && test "$(/opt/devtools/bin/pip list --format=freeze | wc -l)" -ge 6
 
 RUN usermod -l box ubuntu \
     && groupmod -n box ubuntu \

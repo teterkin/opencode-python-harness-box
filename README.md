@@ -1,6 +1,6 @@
 # opencode-python-harness-box
 
-> **Статус: реализовано (`1.1.0`).** Все AC зелёные: `bash tests/run.sh` →
+> **Статус: реализовано (`1.2.0`).** Все AC зелёные: `bash tests/run.sh` →
 > `итого провалено: 0`. Ниже — описание, зафиксированные решения и журнал
 > изменений.
 
@@ -80,6 +80,11 @@ GUI/десктоп-вариантом opencode, решением для multi-us
    сессий) переживает перезапуск через volume.
 8. Python-dev окружение: `python3`, `pip`, `venv` работают внутри контейнера,
    `venv` в смонтированном каталоге переживает перезапуск.
+9. Базовый тулчейн установлен в образ с версионными пинами
+   (`requirements-devtools.txt`): `pytest`, `ruff`, `mypy`, `ipython` доступны
+   из `/opt/devtools`, плагины `pytest --cov` и `pytest -n auto` работают,
+   `ruff check` и `ruff format --check` проходят на файле в `/workspace`.
+   Каждый пин из файла присутствует в контейнере ровно в зафиксированной версии.
 
 ## Зафиксированные решения (ex open questions)
 
@@ -109,12 +114,22 @@ GUI/десктоп-вариантом opencode, решением для multi-us
    `./workspace:/workspace`. Проектный `AGENTS.md` берётся оттуда же; конфиг
    харнесса — в образе, не в volume. `workspace/*` в `.gitignore` (в коммит
    идёт только `.gitkeep`), чтобы код проекта не смешивался с кодом бокса.
+7. **Базовый тулчейн — отдельный venv `/opt/devtools`, состав зафиксирован.**
+   Служебные инструменты (pytest, ruff, mypy, ipython) не смешиваются ни с
+   системным python3, ни с venv проекта: свой каталог, свои пины. Владелец —
+   root, поэтому box туда ничего не доустановит: изменение состава = правка
+   `requirements-devtools.txt` + пересборка образа. `/opt/devtools/bin` стоит
+   в `PATH` последним — `python3` и `pip` остаются системными, а инструменты
+   доступны как обычные команды. Пины — полный `pip freeze`, не только
+   верхнеуровневые: свежий resolve транзитивных зависимостей в чужой
+   сборке — это шанс получить несовместимые версии. Обновление — изолированной
+   правкой пина с прогоном тестов.
 
 ## Архитектура
 
 ```
-Dockerfile            ubuntu:24.04 + python-dev тулчейн + opencode (пин)
-                      + clone харнесса (пин) + install.sh;
+Dockerfile            ubuntu:24.04 + apt-пакеты + venv /opt/devtools (пины)
+                      + opencode (пин) + clone харнесса (пин) + install.sh;
                       пользователь box (uid 1000), $HOME принадлежит root
                       и не-writable для box; volume-точка
                       ~/.local/share/opencode, ~/.cache — tmpfs
@@ -124,12 +139,70 @@ docker-compose.yml    tty/stdin, bind-mount ./workspace -> /workspace,
                       named volume состояния, env-прокидка
 run.sh                сборка при первом запуске, дефолты git-идентичности
                       с хоста, docker compose run --rm
-tests/run.sh          проверки AC1-AC8 в стиле тестов харнесса
+tests/run.sh          проверки AC1-AC9 в стиле тестов харнесса
                       (bash, check/FAIL)
+requirements-devtools.txt  полный pip freeze тулчейна /opt/devtools
 .env.example          OPENCODE_API_KEY, GIT_USER_NAME, GIT_USER_EMAIL
 .gitignore            .env, workspace/* (кроме .gitkeep)
 workspace/            рабочая папка проекта — единственное, что смонтировано
 ```
+
+## Состав образа
+
+Четыре бандла, всё с версионными пинами — окружение одинаковое у всей команды.
+
+### 1. Системный слой (apt)
+
+Основа — `ubuntu:24.04`, `python3` 3.12 из коробки.
+
+| Пакет | Назначение |
+|---|---|
+| `python3` | интерпретатор системного python |
+| `python3-venv` | создание venv в `/workspace/.venv` (AC8) |
+| `python3-pip` | pip для системного python (PEP 668: в систему не ставит, только в venv) |
+| `python3-dev` | заголовочные файлы Python — для сборки C-расширений |
+| `build-essential` | компилятор и линковщик — для пакетов с C/C++-компонентом |
+| `git` | клон харнесса и git внутри бокса |
+| `make` | запуск `Makefile` проекта |
+| `curl` | скачивание установщика opencode |
+| `ca-certificates` | корневые сертификаты для HTTPS |
+| `ripgrep` | быстрый поиск по коду для агента |
+| `jq` | работа с JSON в скриптах и проверках |
+
+### 2. Базовый тулчейн — `/opt/devtools` (venv, пины)
+
+Отдельный venv, владелец root; `/opt/devtools/bin` в конце `PATH`.
+
+| Инструмент | Назначение |
+|---|---|
+| `pytest==9.1.1` | запуск тестов |
+| `pytest-cov==7.1.0` | `pytest --cov` — отчёт о покрытии |
+| `pytest-xdist==3.8.0` | `pytest -n auto` — распараллеливание тестов |
+| `ruff==0.16.10` | линт и формат: `ruff check`, `ruff format --check` |
+| `mypy==2.4.0` | проверка типов |
+| `ipython==9.17.1` | интерактивный REPL |
+
+Остальные строки `requirements-devtools.txt` — транзитивные зависимости,
+снятые `pip list --format=freeze` после сборки. Файл проверяется тестом
+(AC9): каждый пин обязан присутствовать в контейнере.
+
+### 3. opencode
+
+`OPENCODE_VERSION=1.18.34` — CLI агента, официальный установочный скрипт,
+версия проверяется после установки. Обновление — `--build-arg`.
+
+### 4. opencode-harness
+
+`HARNESS_REF=78452bf1` — агент `implementer`, скиллы `tdd-workflow` и
+`prd-authoring`, правила TDD/PRD. `install.sh` кладёт конфиг в
+`~/.config/opencode`; сам клон остаётся в `/opt/opencode-harness` (оттуда
+идёт AC3).
+
+### Пока не входит в образ
+
+Зависимости самого проекта (ml-направление: numpy, pandas, scikit-learn, и
+всё остальное) ставятся не в образ, а в venv проекта на смонтированном
+`/workspace/.venv` — планеруется `setup.sh` с интерактивным меню направлений.
 
 ## Журнал изменений
 
@@ -143,6 +216,7 @@ workspace/            рабочая папка проекта — единст�
 | `0.4.0` | Bind-mount, env-ключи, git-идентичность, volume (AC4, AC5, AC7, AC8) | `f05bedf`, `9fb2dbe` |
 | `1.0.0` | Все AC зелёные, финальный прогон | `351feaf` |
 | `1.1.0` | Mount только `workspace/`, корень репо не виден в контейнере (TDD3) | `9e6db68` |
+| `1.2.0` | Тулчейн `/opt/devtools` c полным freeze, AC9, состав образа в README (TDD1) | — |
 
 ## Открытые пункты
 

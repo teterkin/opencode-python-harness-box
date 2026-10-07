@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Проверки бокса: AC1–AC8 из README. Запуск: bash tests/run.sh
+# Проверки бокса: AC1–AC9 из README. Запуск: bash tests/run.sh
 # Нужен только Docker на хосте; всё остальное происходит в контейнере.
 
 set -uo pipefail
@@ -165,6 +165,32 @@ expect_ok "python из venv работает" box '/workspace/.venv-ac8/bin/pyth
 dc down --remove-orphans >/dev/null 2>&1
 expect_ok "venv пережил перезапуск" box '/workspace/.venv-ac8/bin/python --version'
 rm -rf "$ROOT_DIR/workspace/.venv-ac8"
+dc down --remove-orphans >/dev/null 2>&1
+
+echo
+echo "== AC9: базовый тулчейн /opt/devtools =="
+DEVTOOLS_PINS="$ROOT_DIR/requirements-devtools.txt"
+expect_ok "requirements-devtools.txt существует" test -f "$DEVTOOLS_PINS"
+
+for tool in pytest ruff mypy ipython; do
+    expect_ok "$tool запускается" box "$tool --version"
+    check "$tool в PATH — /opt/devtools" "/opt/devtools/bin/$tool" "$(box "command -v $tool" 2>/dev/null)"
+done
+
+FREEZE="$(box '/opt/devtools/bin/pip list --format=freeze' 2>/dev/null)"
+while IFS= read -r req; do
+    [[ -z "$req" || "$req" == \#* ]] && continue
+    check "пин установлен: $req" "$req" "$FREEZE"
+done < "$DEVTOOLS_PINS"
+
+expect_ok "pytest --cov работает (pytest-cov)" \
+    box 'mkdir -p /tmp/ac9 && printf "%s\n" "def test_ok():" "    assert True" > /tmp/ac9/test_ok.py && cd /tmp/ac9 && pytest --cov=. -q'
+expect_ok "pytest -n auto работает (pytest-xdist)" \
+    box 'mkdir -p /tmp/ac9 && printf "%s\n" "def test_ok():" "    assert True" > /tmp/ac9/test_ok.py && cd /tmp/ac9 && pytest -n auto -q'
+
+expect_ok "ruff check и ruff format --check проходят на файле в /workspace" \
+    box 'printf "x = 1\n" > /workspace/ac9_probe.py && ruff check /workspace/ac9_probe.py && ruff format --check /workspace/ac9_probe.py'
+rm -f "$ROOT_DIR/workspace/ac9_probe.py"
 dc down --remove-orphans >/dev/null 2>&1
 
 echo
