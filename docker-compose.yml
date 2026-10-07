@@ -5,3 +5,17 @@ services:
       context: .
     tty: true
     stdin_open: true
+    environment:
+      - OPENCODE_API_KEY
+      - GIT_USER_NAME
+      - GIT_USER_EMAIL
+    volumes:
+      - .:/workspace
+      - opencode-state:/home/box/.local/share/opencode
+      - type: tmpfs
+        target: /home/box/.cache
+        tmpfs:
+          mode: 0o1777
+
+volumes:
+  opencode-state:

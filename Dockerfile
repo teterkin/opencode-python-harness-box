@@ -41,7 +41,11 @@ RUN git clone --quiet https://github.com/teterkin/opencode-harness /opt/opencode
 
 RUN chown root:root /home/box && chmod 755 /home/box
 
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod 755 /usr/local/bin/entrypoint.sh
+
 USER box
 WORKDIR /workspace
 
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["opencode"]
