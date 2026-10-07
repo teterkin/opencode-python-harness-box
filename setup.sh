@@ -12,6 +12,11 @@ PY="$VENV_DIR/bin/python"
 NUMPY_VERSION=2.5.3
 PANDAS_VERSION=3.0.6
 SKLEARN_VERSION=1.9.1
+FASTAPI_VERSION=0.142.2
+DJANGO_VERSION=6.1.2
+FLASK_VERSION=3.1.3
+UVICORN_VERSION=0.54.0
+GUNICORN_VERSION=26.2.0
 
 # Цвета: на TTY или по FORCE_COLOR; NO_COLOR гасит всегда. В пайпе (как в
 # тестах) вывод остаётся машиночитаемым — без управляющих кодов.
@@ -43,12 +48,12 @@ hdr() { printf '%s%s%s\n' "$C_CYAN" "$1" "$C_RESET"; }
 err() { printf '%sошибка:%s %s\n' "$C_RED" "$C_RESET" "$1" >&2; }
 
 usage() {
-    printf '%sИспользование%s: setup.sh [ml|gpu ...]\n\n' "$C_BOLD" "$C_RESET"
+    printf '%sИспользование%s: setup.sh [ml|web|gpu ...]\n\n' "$C_BOLD" "$C_RESET"
     hdr "Направления:"
-    printf '  %sml%s   numpy==%s, pandas==%s,\n' \
-        "$C_BOLD" "$C_RESET" "$NUMPY_VERSION" "$PANDAS_VERSION"
-    printf '       scikit-learn==%s — установка с фиксированными версиями\n' \
-        "$SKLEARN_VERSION"
+    printf '  %sml%s   numpy==%s, pandas==%s, scikit-learn==%s\n' \
+        "$C_BOLD" "$C_RESET" "$NUMPY_VERSION" "$PANDAS_VERSION" "$SKLEARN_VERSION"
+    printf '  %sweb%s  fastapi, django, flask, uvicorn, gunicorn\n' \
+        "$C_BOLD" "$C_RESET"
     printf '  %sgpu%s  инструкция по PyTorch/TensorFlow, ничего не устанавливает\n\n' \
         "$C_BOLD" "$C_RESET"
     printf 'Окружение: %s (переопределяется переменной VENV_DIR)\n' "$VENV_DIR"
@@ -61,14 +66,27 @@ ensure_venv() {
     fi
 }
 
-install_ml() {
+install_pkgs() {
     ensure_venv
-    "$PY" -m pip install --disable-pip-version-check --quiet \
+    "$PY" -m pip install --disable-pip-version-check --quiet "$@"
+    printf '%s✓%s установлено в %s:\n' "$C_GREEN" "$C_RESET" "$VENV_DIR"
+    "$PY" -m pip list --format=freeze
+}
+
+install_ml() {
+    install_pkgs \
         "numpy==$NUMPY_VERSION" \
         "pandas==$PANDAS_VERSION" \
         "scikit-learn==$SKLEARN_VERSION"
-    printf '%s✓%s установлено в %s:\n' "$C_GREEN" "$C_RESET" "$VENV_DIR"
-    "$PY" -m pip list --format=freeze
+}
+
+install_web() {
+    install_pkgs \
+        "fastapi==$FASTAPI_VERSION" \
+        "django==$DJANGO_VERSION" \
+        "flask==$FLASK_VERSION" \
+        "uvicorn==$UVICORN_VERSION" \
+        "gunicorn==$GUNICORN_VERSION"
 }
 
 show_gpu() {
@@ -97,10 +115,11 @@ menu() {
     current_env | sed 's/^/  /'
     echo
     hdr "Направления:"
-    printf '  1) %sml%s   — numpy==%s, pandas==%s,\n' \
-        "$C_BOLD" "$C_RESET" "$NUMPY_VERSION" "$PANDAS_VERSION"
-    printf '            scikit-learn==%s (фиксированные версии)\n' "$SKLEARN_VERSION"
-    printf '  2) %sgpu%s  — инструкция по PyTorch/TensorFlow, ничего не ставит\n' \
+    printf '  1) %sml%s   — numpy==%s, pandas==%s, scikit-learn==%s\n' \
+        "$C_BOLD" "$C_RESET" "$NUMPY_VERSION" "$PANDAS_VERSION" "$SKLEARN_VERSION"
+    printf '  2) %sweb%s  — fastapi, django, flask, uvicorn, gunicorn\n' \
+        "$C_BOLD" "$C_RESET"
+    printf '  3) %sgpu%s  — инструкция по PyTorch/TensorFlow, ничего не ставит\n' \
         "$C_BOLD" "$C_RESET"
     printf '%sВыберите номер или название (Enter — выйти): %s' "$C_DIM" "$C_RESET"
     local choice=''
@@ -108,7 +127,8 @@ menu() {
     case "$choice" in
         ''|q|Q) return 0 ;;
         1|ml)   install_ml ;;
-        2|gpu)  show_gpu ;;
+        2|web)  install_web ;;
+        3|gpu)  show_gpu ;;
         *)
             err "неизвестный выбор: $choice"
             return 1
@@ -142,6 +162,7 @@ if [[ "$help_only" -eq 0 ]] && ! in_container; then
     cat >&2 <<EOF
   ./run.sh setup.sh          — интерактивное меню
   ./run.sh setup.sh ml       — установка ml-направления
+  ./run.sh setup.sh web      — установка веб-направления
   ./run.sh setup.sh gpu      — инструкция по PyTorch/TensorFlow
 EOF
     exit 1
@@ -155,6 +176,7 @@ fi
 for arg in "$@"; do
     case "$arg" in
         ml) install_ml ;;
+        web) install_web ;;
         gpu) show_gpu ;;
         -h|--help) usage ;;
         *)

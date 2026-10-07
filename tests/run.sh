@@ -234,6 +234,7 @@ else
 fi
 check "меню перечисляет направления" "ml" "$MENU_OUT"
 check "меню показывает текущее окружение" "Текущее окружение" "$MENU_OUT"
+check "меню перечисляет направление web" "web" "$MENU_OUT"
 check_absent "в не-TTY цветов нет (вывод машиночитаем)" $'\033[' "$MENU_OUT"
 check "FORCE_COLOR включает цвет" $'\033[' \
     "$(FORCE_COLOR=1 "$ROOT_DIR/setup.sh" --help 2>&1)"
@@ -252,6 +253,21 @@ for spec in 'numpy:NUMPY_VERSION' 'pandas:PANDAS_VERSION' 'sklearn:SKLEARN_VERSI
     check "$pkg по пину из setup.sh ($pin)" "$pin" \
         "$(box "$AC10_VENV/bin/python -c \"import $pkg; print($pkg.__version__)\"" 2>&1)"
 done
+
+expect_ok "setup.sh web ставит пакеты" box "VENV_DIR=$AC10_VENV setup.sh web"
+for spec in 'fastapi:FASTAPI_VERSION' 'django:DJANGO_VERSION' 'flask:FLASK_VERSION' \
+    'uvicorn:UVICORN_VERSION' 'gunicorn:GUNICORN_VERSION'; do
+    pkg="${spec%%:*}"; var="${spec##*:}"
+    pin="$(grep -E "^${var}=" "$ROOT_DIR/setup.sh" | head -n1 | cut -d= -f2)"
+    if [[ -z "$pin" ]]; then
+        bad "пин $var не найден в setup.sh"
+        continue
+    fi
+    check "$pkg по пину из setup.sh ($pin)" "$pin" \
+        "$(box "$AC10_VENV/bin/python -c \"from importlib.metadata import version; print(version('$pkg'))\"" 2>&1)"
+done
+expect_ok "web-пакеты импортируются" \
+    box "$AC10_VENV/bin/python -c \"import fastapi, django, flask, uvicorn, gunicorn\""
 
 GPU_OUT="$(box 'setup.sh gpu' 2>&1)"
 check "gpu-направление отдаёт инструкцию по PyTorch" "pytorch" "$GPU_OUT"
