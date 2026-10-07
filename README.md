@@ -9,11 +9,6 @@ Python-окружением разработки. Окружение воспр�
 команды, а команды агента изолированы от хоста: `bash: *: allow` действует
 внутри контейнера, а не на ноутбуке.
 
-**Одна строка (для GitHub description):**
-
-> Reproducible, sandboxed opencode environment with the TDD/PRD harness baked
-> in — Python dev container edition.
-
 ## Зачем
 
 - `git clone` + `./run.sh` на чистой машине с Docker даёт opencode с харнессом
