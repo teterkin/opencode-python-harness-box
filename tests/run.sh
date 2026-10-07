@@ -235,6 +235,7 @@ fi
 check "меню перечисляет направления" "ml" "$MENU_OUT"
 check "меню показывает текущее окружение" "Текущее окружение" "$MENU_OUT"
 check "меню перечисляет направление web" "web" "$MENU_OUT"
+check "меню перечисляет удаление пакетов" "Удалить все установленные пакеты" "$MENU_OUT"
 check_absent "в не-TTY цветов нет (вывод машиночитаем)" $'\033[' "$MENU_OUT"
 check "FORCE_COLOR включает цвет" $'\033[' \
     "$(FORCE_COLOR=1 "$ROOT_DIR/setup.sh" --help 2>&1)"
@@ -281,6 +282,18 @@ check "выбор пункта меню сообщает об установке
 GPU_OUT="$(box 'setup.sh gpu' 2>&1)"
 check "gpu-направление отдаёт инструкцию по PyTorch" "pytorch" "$GPU_OUT"
 check "gpu-направление отдаёт инструкцию по TensorFlow" "tensorflow" "$GPU_OUT"
+
+MENU_RM_CANCEL="$(box "printf '4\n\n' | VENV_DIR=$AC10_VENV setup.sh" 2>&1)"
+check "удаление: пустой ответ на подтверждение — отмена" "Отменено" "$MENU_RM_CANCEL"
+expect_ok "удаление: после отмены окружение цело" \
+    box "test -x $AC10_VENV/bin/python"
+MENU_RM_OUT="$(box "printf '4\ny\n' | VENV_DIR=$AC10_VENV setup.sh" 2>&1)"
+check "удаление: подтверждение удаляет пакеты" "удалено" "$MENU_RM_OUT"
+if box "test ! -e $AC10_VENV" >/dev/null 2>&1; then
+    ok "удаление: окружение больше не существует"
+else
+    bad "удаление: окружение осталось на месте"
+fi
 
 rm -rf "$ROOT_DIR/workspace/.venv-ac10"
 dc down --remove-orphans >/dev/null 2>&1

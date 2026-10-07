@@ -94,6 +94,26 @@ install_web() {
         "gunicorn==$GUNICORN_VERSION"
 }
 
+remove_pkgs() {
+    if [[ ! -e "$VENV_DIR" ]]; then
+        printf 'окружение %s не создано — удалять нечего\n' "$VENV_DIR"
+        return 0
+    fi
+    printf '%sУдалить окружение %s со всеми установленными пакетами? [y/N]: %s' \
+        "$C_BOLD" "$VENV_DIR" "$C_RESET"
+    local answer=''
+    read -r answer || { echo; printf 'Отменено\n'; return 0; }
+    case "$answer" in
+        y|Y|yes|Yes|YES|д|Д|да|Да|ДА)
+            rm -rf "$VENV_DIR"
+            printf '%s✓%s удалено окружение: %s\n' "$C_GREEN" "$C_RESET" "$VENV_DIR"
+            ;;
+        *)
+            printf 'Отменено\n'
+            ;;
+    esac
+}
+
 show_gpu() {
     printf '%sНаправление gpu%s ничего не устанавливает автоматически:\n' \
         "$C_CYAN" "$C_RESET"
@@ -126,14 +146,17 @@ menu() {
         "$C_BOLD" "$C_RESET"
     printf '  3) %sgpu%s  — инструкция по PyTorch/TensorFlow, ничего не ставит\n' \
         "$C_BOLD" "$C_RESET"
+    printf '  4) %sremove%s — Удалить все установленные пакеты по направлениям\n' \
+        "$C_BOLD" "$C_RESET"
     printf '%sВыберите номер или название (Enter — выйти): %s' "$C_DIM" "$C_RESET"
     local choice=''
     read -r choice || { echo; return 0; }
     case "$choice" in
         ''|q|Q) return 0 ;;
-        1|ml)   say_installing ml;  install_ml ;;
-        2|web)  say_installing web; install_web ;;
-        3|gpu)  show_gpu ;;
+        1|ml)      say_installing ml;  install_ml ;;
+        2|web)     say_installing web; install_web ;;
+        3|gpu)     show_gpu ;;
+        4|remove)  remove_pkgs ;;
         *)
             err "неизвестный выбор: $choice"
             return 1
